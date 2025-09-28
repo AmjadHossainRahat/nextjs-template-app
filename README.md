@@ -170,3 +170,9 @@ User navigates → Next.js App Router → Middleware check
      - For additional security and SEO, middleware runs before rendering.
      - It reads auth_token cookie (or mock token) and checks the role.
      - Unauthorized users are redirected to `/login` before the page is served.
+
+### About Roles:
+In this app, 3 dummy role was used. You might want to remove, update or add role/s. To do that you need to bring change in followings
+  - role based folder name
+  - `config` inside `middleware.ts` file at the root directory
+  - `./constants/roles.ts` and `./constants/routes.ts`
