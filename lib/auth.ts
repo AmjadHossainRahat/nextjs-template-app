@@ -1,50 +1,83 @@
-/**
- * Dev/mock authentication helpers
- * In production, replace these with real API calls
- */
-
+import { type User } from '@/context/AuthContext';
 import { type Role, ROLES } from '@/constants/roles';
-import type { User } from '@/context/AuthContext';
 
+export interface AuthResponse {
+  user: User;
+  accessToken: string;
+  refreshToken: string;
+}
+
+// ----------------------
+// MOCK IMPLEMENTATION
+// ----------------------
 const MOCK_USERS: User[] = [
-  { name: 'Admin User', email: 'admin@example.com', role: ROLES.SYSTEM_ADMIN },
-  { name: 'Role One User', email: 'user1@example.com', role: ROLES.ROLE_ONE },
-  { name: 'Role Two User', email: 'user2@example.com', role: ROLES.ROLE_TWO },
+  {
+    name: 'Admin User',
+    email: 'system-admin@example.com',
+    role: ROLES.SYSTEM_ADMIN,
+  },
+  {
+    name: 'Role One User',
+    email: 'role-one@example.com',
+    role: ROLES.ROLE_ONE,
+  },
+  {
+    name: 'Role Two User',
+    email: 'role-two@example.com',
+    role: ROLES.ROLE_TWO,
+  },
 ];
 
-const TOKEN_KEY = 'auth_token';
+async function mockLogin(email: string, password: string): Promise<AuthResponse | null> {
+  const foundUser = MOCK_USERS.find((u) => u.email === email);
+  if (!foundUser || password !== '123456') return null;
 
-/**
- * Simulate login and return mock token
- */
-export const mockLogin = async (email: string): Promise<string> => {
-  const user = MOCK_USERS.find((u) => u.email === email);
-  if (!user) throw new Error('User not found');
+  const accessToken = `mock-access-token.${btoa(email)}.${Date.now()}`;
+  const refreshToken = `mock-refresh-token.${Date.now()}`;
 
-  const token = btoa(JSON.stringify({ email, role: user.role }));
-  localStorage.setItem(TOKEN_KEY, token);
-  return token;
-};
+  return { user: foundUser, accessToken, refreshToken };
+}
 
-/**
- * Get current logged-in user from token
- */
-export const getUserFromToken = (): User | null => {
-  const token = localStorage.getItem(TOKEN_KEY);
-  if (!token) return null;
+async function mockLogout(): Promise<void> {
+  return Promise.resolve();
+}
 
-  try {
-    const data = JSON.parse(atob(token)) as { email: string; role: Role };
-    const user = MOCK_USERS.find((u) => u.email === data.email);
-    return user ?? null;
-  } catch {
-    return null;
-  }
-};
+// ----------------------
+// REAL IMPLEMENTATION
+// ----------------------
+async function realLogin(email: string, password: string): Promise<AuthResponse | null> {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
 
-/**
- * Logout
- */
-export const logout = () => {
-  localStorage.removeItem(TOKEN_KEY);
-};
+  if (!res.ok) return null;
+
+  const data = await res.json();
+
+  return {
+    user: {
+      name: data.user.name,
+      email: data.user.email,
+      role: data.user.role as Role,
+    },
+    accessToken: data.accessToken,
+    refreshToken: data.refreshToken,
+  };
+}
+
+async function realLogout(): Promise<void> {
+  await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/logout`, {
+    method: 'POST',
+    credentials: 'include',
+  });
+}
+
+// ----------------------
+// CONDITIONAL EXPORT
+// ----------------------
+const useMock = process.env.NEXT_PUBLIC_DEV_AUTH === '1';
+
+export const login = useMock ? mockLogin : realLogin;
+export const logout = useMock ? mockLogout : realLogout;

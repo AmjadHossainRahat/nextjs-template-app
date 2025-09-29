@@ -5,11 +5,10 @@ import {
   useContext,
   useState,
   ReactNode,
-  useEffect
+  useEffect,
 } from 'react';
-import { Role, ROLES } from '@/constants/roles';
-
-// export type Role = 'system-admin' | 'role-one' | 'role-two';
+import { type Role } from '@/constants/roles';
+import { login as authLogin, logout as authLogout, type AuthResponse } from '@/lib/auth';
 
 export interface User {
   name: string;
@@ -19,63 +18,58 @@ export interface User {
 
 export interface AuthContextType {
   user: User | null;
+  accessToken: string | null;
+  refreshToken: string | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(
+  undefined
+);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [refreshToken, setRefreshToken] = useState<string | null>(null);
 
+  // Restore session from localStorage
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+    const stored = localStorage.getItem('auth');
+    if (stored) {
+      const parsed: AuthResponse = JSON.parse(stored);
+      setUser(parsed.user);
+      setAccessToken(parsed.accessToken);
+      setRefreshToken(parsed.refreshToken);
     }
   }, []);
 
   const login = async (email: string, password: string): Promise<void> => {
-  return new Promise<void>((resolve, reject) => {
-    setTimeout(() => {
-      if (!email || !password) {
-        reject(new Error('Invalid credentials'));
-        return;
-      }
+    const result = await authLogin(email, password);
+    if (!result) throw new Error('Invalid credentials');
 
-      // Determine role
-      let role: Role = ROLES.ROLE_ONE;
-      if (email.includes(ROLES.SYSTEM_ADMIN)) { // TODO: replace this logic
-        role = ROLES.SYSTEM_ADMIN;
-      } else if (email.includes(ROLES.ROLE_TWO)) { // TODO: replace this logic
-        role = ROLES.ROLE_TWO;
-      }
+    localStorage.setItem('auth', JSON.stringify(result));
+    setUser(result.user);
+    setAccessToken(result.accessToken);
+    setRefreshToken(result.refreshToken);
+  };
 
-      const loggedInUser: User = {
-        name: email.split('@')[0] || 'Default-Name', // TODO: replace this logic
-        email,
-        role,
-      };
-
-      localStorage.setItem('user', JSON.stringify(loggedInUser));
-      setUser(loggedInUser);
-      resolve();
-    }, 500);
-  });
-};
-
-
-  const logout = () => {
-    localStorage.removeItem('user');
+  const logout = async () => {
+    await authLogout();
+    localStorage.removeItem('auth');
     setUser(null);
+    setAccessToken(null);
+    setRefreshToken(null);
   };
 
   const value: AuthContextType = {
     user,
-    isAuthenticated: !!user,
+    accessToken,
+    refreshToken,
+    isAuthenticated: !!user && !!accessToken,
     login,
-    logout
+    logout,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

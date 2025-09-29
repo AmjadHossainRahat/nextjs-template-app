@@ -59,9 +59,9 @@ export default function LoginPage() {
             <p className="mb-2">You can use any of these emails with password <code>123456</code> for quick testing:</p>
 
             <ul className="list-disc pl-5 space-y-1">
-              <li><code>admin@example.com</code> — <em>system-admin</em></li>
-              <li><code>user1@example.com</code> — <em>role-one</em></li>
-              <li><code>user2@example.com</code> — <em>role-two</em></li>
+              <li><code>system-admin@example.com</code> — <em>system-admin</em></li>
+              <li><code>role-one@example.com</code> — <em>role-one</em></li>
+              <li><code>role-two@example.com</code> — <em>role-two</em></li>
             </ul>
 
             <p className="mt-3 text-xs text-gray-600">
