@@ -28,7 +28,7 @@ const MOCK_USERS: User[] = [
   },
 ];
 
-async function mockLogin(email: string, password: string): Promise<AuthResponse | null> {
+export async function mockLogin(email: string, password: string): Promise<AuthResponse | null> {
   const foundUser = MOCK_USERS.find((u) => u.email === email);
   if (!foundUser || password !== '123456') return null;
 
